@@ -1,0 +1,13 @@
+{
+  "name": "physiosaathi",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "./run.sh",
+    "start": "./run.sh",
+    "dev:frontend": "npm --prefix frontend start",
+    "dev:backend": "python3 -m uvicorn server:app --app-dir backend --port 8001 --reload",
+    "build": "npm --prefix frontend run build"
+  }
+}
+

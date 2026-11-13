@@ -1,0 +1,42 @@
+{
+  "app_name": "Pysiosaathi",
+  "theme": "dark",
+  "archetype": "The Performance Pro / Elite Athleticism",
+  "color_system": {
+    "background_primary": "#0A0A0A",
+    "background_surface": "#141416",
+    "background_elevated": "#1C1C21",
+    "border_subtle": "#27272E",
+    "text_primary": "#F4F4F5",
+    "text_secondary": "#A1A1AA",
+    "accent_violet": "#8B5CF6",
+    "accent_indigo": "#6366F1",
+    "fitness_teal": "#14B8A6",
+    "fitness_lime": "#10B981",
+    "signal_red": "#EF4444"
+  },
+  "typography": {
+    "heading_font": "Outfit, sans-serif",
+    "body_font": "Inter, sans-serif",
+    "mono_font": "JetBrains Mono, monospace"
+  },
+  "routes": [
+    "/",
+    "/auth",
+    "/onboarding",
+    "/dashboard",
+    "/yoga",
+    "/workout",
+    "/plans",
+    "/progress",
+    "/assistant",
+    "/profile",
+    "/settings"
+  ],
+  "image_urls": {
+    "hero_gym": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "yoga_studio": "https://images.unsplash.com/photo-1687783615476-f4c12358ca9d?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "elite_training": "https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+  "instructions_to_main_agent": "Ensure every interactive and key informational element contains data-testid attributes (e.g. data-testid='workout-start-btn'). Implement responsive sidebar & mobile bottom navigation, MediaPipe pose tracking foundation with squat/plank/push-up rep counter, multi-language support (English, Hindi, Kannada, Telugu, Bengali), 20+ yoga & 20+ workout exercises, voice guidance speech synthesis, and AI fitness assistant."
+}

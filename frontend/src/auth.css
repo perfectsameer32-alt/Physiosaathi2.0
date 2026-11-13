@@ -1,0 +1,13 @@
+.auth-screen{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;background:#0b0d12}.auth-card{max-width:460px;width:100%;margin:auto;padding:48px}.auth-card .brand{padding:0;margin-bottom:72px}.auth-card h1{font:600 42px 'Space Grotesk';letter-spacing:-1.5px;margin:12px 0}.auth-card label{display:block;color:#aab3c3;font-size:11px;margin-top:19px}.auth-card input{display:block;width:100%;height:45px;margin-top:7px;background:#151a24;border:1px solid #2b3340;border-radius:7px;color:#fff;padding:0 12px;outline:0}.auth-card input:focus{border-color:#8b6ee7}.auth-submit{width:100%;margin-top:18px}.auth-message{font-size:11px;color:#f1b67a;line-height:1.5}.preview-link{display:flex;justify-content:center;align-items:center;gap:4px;color:#a994ff;font-size:11px;margin-top:25px}
+.auth-config-box{margin-top:20px;border-top:1px solid #232936;padding-top:15px}
+.auth-config-toggle{display:flex;align-items:center;gap:7px;background:none;border:0;color:#94a3b8;font-size:11px;padding:0;cursor:pointer;width:100%}
+.auth-config-toggle:hover{color:#fff}
+.config-status-dot{font-size:10px;margin-left:auto}
+.config-status-dot.online{color:#a8f368}
+.config-status-dot.offline{color:#f87171}
+.auth-config-details{margin-top:12px;background:#151a24;border:1px solid #262e3d;border-radius:8px;padding:12px}
+.auth-config-details label{font-size:10px;color:#8d96a9;margin-top:8px}.auth-config-details label:first-child{margin-top:0}
+.auth-config-details input{height:36px;font-size:11px;margin-top:4px}
+.config-actions{display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px}
+.config-save-btn{background:#25203c;border:1px solid #4a3a78;color:#baa6ff;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:600;cursor:pointer}
+.config-health-tag{font:500 9px 'DM Mono';color:#26d9c2}.auth-image{position:relative;overflow:hidden;background:#201a36}.auth-image:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#14152a 0%,transparent 58%),linear-gradient(0deg,#10131d88,transparent)}.auth-image img{height:100%;width:100%;object-fit:cover;filter:saturate(.7);opacity:.76}.auth-image>div{position:absolute;z-index:1;left:10%;bottom:12%}.auth-image h2{font:600 45px 'Space Grotesk';line-height:1.02;margin-top:17px}.auth-image h2 em{font-style:normal;color:#b29bff}@media(max-width:760px){.auth-screen{display:block}.auth-card{padding:35px 22px}.auth-card .brand{margin-bottom:55px}.auth-card h1{font-size:35px}.auth-image{display:none}}

@@ -1,0 +1,10 @@
+async def run_test(page, output_dir, page_url):
+    try:
+     await page.set_viewport_size({'width':1920,'height':1080}); await page.goto('https://pose-coach-19--2vmumr4n.preview.emergentagent.com/workout',wait_until='networkidle'); await page.wait_for_timeout(500)
+     cards=page.locator('[data-testid^="workout-exercise-card-"]'); assert await cards.count()>=20; print('PASS workout count',await cards.count()); await page.locator('[data-testid="workout-search-input"]').fill('Bodyweight'); assert await cards.count()==1; print('PASS workout search')
+     await page.locator('[data-testid="workout-exercise-card-0"]').click(); await page.wait_for_timeout(300); assert await page.locator('[data-testid="demo-video-play"]').is_visible(); await page.locator('[data-testid="camera-start-button"]').click(); await page.wait_for_timeout(400); assert await page.locator('text=Camera tracking').is_visible(); print('PASS workout detail camera fallback')
+     await page.goto('https://pose-coach-19--2vmumr4n.preview.emergentagent.com/assistant',wait_until='networkidle'); await page.locator('[data-testid="assistant-input"]').fill('Give one warm-up tip'); await page.locator('[data-testid="assistant-send-button"]').click(); await page.wait_for_timeout(4500); assert await page.locator('[data-testid^="assistant-message-"]').count()>=3; print('PASS assistant')
+     await page.goto('https://pose-coach-19--2vmumr4n.preview.emergentagent.com/auth',wait_until='networkidle'); await page.locator('[data-testid="auth-signin-button"]').click(); assert await page.locator('[data-testid="auth-message"]').is_visible(); print('PASS auth config')
+     await page.set_viewport_size({'width':390,'height':844}); await page.goto('https://pose-coach-19--2vmumr4n.preview.emergentagent.com/dashboard',wait_until='networkidle'); assert not await page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'); print('PASS mobile overflow')
+    except AssertionError as e: print('FINDING:',e)
+    except Exception as e: print('FINDING: runtime',e)
