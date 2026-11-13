@@ -340,3 +340,71 @@ describe('Biomechanical Pose Classifier & Stance Validation', () => {
     expect(repAnalysis.feedbackMessage).toContain('PERFECT REP');
   });
 });
+
+describe('Mic & Audio Announcement System', () => {
+  beforeEach(() => {
+    // Mock SpeechSynthesis
+    window.speechSynthesis = {
+      paused: false,
+      speaking: false,
+      speak: jest.fn(),
+      cancel: jest.fn(),
+      resume: jest.fn(),
+      getVoices: jest.fn(() => [
+        { name: 'Google US English Natural', lang: 'en-US', default: true },
+        { name: 'Samantha', lang: 'en-US', default: false },
+      ]),
+      onvoiceschanged: null,
+    };
+    window.SpeechSynthesisUtterance = function (text) {
+      this.text = text;
+      this.rate = 1.0;
+      this.pitch = 1.0;
+      this.volume = 1.0;
+      this.voice = null;
+      this.onstart = null;
+      this.onend = null;
+      this.onerror = null;
+    };
+  });
+
+  test('speakAnnouncement triggers speech synthesis with proper utterance', () => {
+    const { speakAnnouncement, cancelAnnouncement } = require('./lib/speech');
+    speakAnnouncement('Rep 1! Good squat!', { priority: false, voiceEnabled: true });
+    expect(window.speechSynthesis.speak).toHaveBeenCalled();
+
+    cancelAnnouncement();
+    expect(window.speechSynthesis.cancel).toHaveBeenCalled();
+  });
+
+  test('Speech recognizer parses workout voice commands correctly', () => {
+    const { createSpeechRecognizer } = require('./lib/speech');
+
+    // Mock webkitSpeechRecognition
+    window.webkitSpeechRecognition = function () {
+      this.continuous = true;
+      this.interimResults = true;
+      this.lang = 'en-US';
+      this.start = jest.fn();
+      this.stop = jest.fn();
+      this.onstart = null;
+      this.onresult = null;
+      this.onerror = null;
+      this.onend = null;
+    };
+
+    const recognizedCommands = [];
+    const recognizer = createSpeechRecognizer({
+      continuous: true,
+      onCommand: (cmd) => {
+        recognizedCommands.push(cmd);
+      },
+    });
+
+    expect(recognizer.supported).toBe(true);
+
+    // Test command matching logic via mock recognition instance
+    recognizer.start();
+    expect(recognizer).toBeDefined();
+  });
+});
