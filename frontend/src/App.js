@@ -258,12 +258,14 @@ function Dashboard({ lang, profile }) {
     const dayMinutes = [0, 0, 0, 0, 0, 0, 0];
 
     history.forEach((item) => {
-      if (!item.timestamp) return;
-      const d = new Date(item.timestamp);
+      const ts = item.timestamp || item.created_at || item.date;
+      if (!ts) return;
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return;
       const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
       if (diffDays >= 0 && diffDays < 7) {
         const dayIdx = (d.getDay() + 6) % 7;
-        dayMinutes[dayIdx] += Math.round((item.durationSeconds || 0) / 60);
+        dayMinutes[dayIdx] += Math.round((item.durationSeconds || item.duration_seconds || 0) / 60);
       }
     });
 
@@ -286,7 +288,8 @@ function Dashboard({ lang, profile }) {
       : t.dashboard.greetingEvening;
 
   const recentList = history.slice(0, 3).map((item) => {
-    const matched = allExercises.find((x) => x.id === item.exerciseId) || allExercises[0];
+    const matched =
+      allExercises.find((x) => x.id === (item.exerciseId || item.exercise_id)) || allExercises[0];
     return {
       ...matched,
       customName: item.name,
@@ -493,7 +496,15 @@ function Dashboard({ lang, profile }) {
                 className="recent-item"
                 data-testid={`recent-exercise-${i}`}
               >
-                <img src={e.image} alt={e.name} />
+                <img
+                  src={e.image || (e.youtubeId ? `https://img.youtube.com/vi/${e.youtubeId}/hqdefault.jpg` : '')}
+                  alt={e.name}
+                  onError={(evt) => {
+                    if (e.youtubeId && !evt.currentTarget.src.includes(e.youtubeId)) {
+                      evt.currentTarget.src = `https://img.youtube.com/vi/${e.youtubeId}/hqdefault.jpg`;
+                    }
+                  }}
+                />
                 <div>
                   <strong>{e.customName || e.name}</strong>
                   <span>
@@ -594,9 +605,39 @@ function Library({ type }) {
             key={e.id}
             data-testid={`${type}-exercise-card-${i}`}
           >
-            <div className="exercise-image">
-              <img src={e.image} alt={e.name} />
+            <div className="exercise-image" style={{ position: 'relative' }}>
+              <img
+                src={e.image || (e.youtubeId ? `https://img.youtube.com/vi/${e.youtubeId}/hqdefault.jpg` : '')}
+                alt={e.name}
+                loading="lazy"
+                onError={(evt) => {
+                  if (e.youtubeId && !evt.currentTarget.src.includes(e.youtubeId)) {
+                    evt.currentTarget.src = `https://img.youtube.com/vi/${e.youtubeId}/hqdefault.jpg`;
+                  }
+                }}
+              />
               <span className="level-tag">{e.level}</span>
+              {e.youtubeId && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    background: 'rgba(239, 68, 68, 0.9)',
+                    color: '#fff',
+                    fontSize: 10,
+                    padding: '2px 7px',
+                    borderRadius: 4,
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  <Play size={9} fill="currentColor" /> TUTORIAL
+                </span>
+              )}
               {e.tracking && (
                 <span className="tracking-tag">
                   <Video size={12} /> Trackable
@@ -686,6 +727,23 @@ function Workout() {
     }
   };
 
+  const handleVoiceToggle = () => {
+    const nextVoice = !voice;
+    setVoice(nextVoice);
+    if (nextVoice) {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.resume();
+        const utter = new SpeechSynthesisUtterance('Voice guidance enabled');
+        utter.rate = 1.05;
+        window.speechSynthesis.speak(utter);
+      }
+    } else {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    }
+  };
+
   const handlePauseToggle = () => {
     const nextPaused = !isPaused;
     setIsPaused(nextPaused);
@@ -714,13 +772,13 @@ function Workout() {
       name: e.name,
       category: e.category,
       duration_seconds: duration,
-      reps: Math.max(reps, 3),
+      reps: reps,
       calories: caloriesEst,
       accuracy: 94,
     };
 
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      const backendUrl = getBackendUrl();
       await fetch(`${backendUrl}/api/sessions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -739,11 +797,14 @@ function Workout() {
     addSession({
       id: `session-${Date.now()}`,
       exerciseId: e.id,
+      exercise_id: e.id,
       name: e.name,
       category: e.category,
       durationSeconds: duration,
+      duration_seconds: duration,
       durationFormatted: `${durationMin} min`,
-      reps: Math.max(reps, 3),
+      duration_formatted: `${durationMin} min`,
+      reps: reps,
       calories: caloriesEst,
       accuracy: 94,
       date: `Today · ${durationMin} min`,
@@ -791,7 +852,7 @@ function Workout() {
         </div>
         <button
           className={voice ? 'voice-toggle on' : 'voice-toggle'}
-          onClick={() => setVoice(!voice)}
+          onClick={handleVoiceToggle}
           data-testid="voice-toggle"
         >
           <Volume2 size={17} />
@@ -907,17 +968,17 @@ function Workout() {
       <div className="workout-controls">
         <div className="counter">
           <span>REPETITIONS</span>
-          <strong>{active ? Math.max(reps, 3) : '—'}</strong>
+          <strong>{active ? reps : '—'}</strong>
           <small>{active ? 'Keep your rhythm' : 'Start camera to count'}</small>
         </div>
 
         <div className="session-progress">
           <div>
             <span>SESSION PROGRESS</span>
-            <strong>{active ? (elapsedSeconds > 0 ? formatTime(elapsedSeconds) : '08:42') : '00:00'}</strong>
+            <strong>{active ? (elapsedSeconds > 0 ? formatTime(elapsedSeconds) : '00:00') : '00:00'}</strong>
           </div>
           <div className="progress-line">
-            <i style={{ width: active ? `${progressPercent || 36}%` : '0%' }} />
+            <i style={{ width: active ? `${progressPercent}%` : '0%' }} />
           </div>
           <p>
             <span className="signal yellow" />{' '}
@@ -990,7 +1051,7 @@ function Workout() {
                 <span>Duration</span>
               </div>
               <div className="finish-metric">
-                <strong>{Math.max(reps, 3)}</strong>
+                <strong>{reps}</strong>
                 <span>Reps Counted</span>
               </div>
               <div className="finish-metric">
@@ -1018,7 +1079,7 @@ function Progress() {
   useEffect(() => {
     const fetchRealSessions = async () => {
       try {
-        const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+        const backendUrl = getBackendUrl();
         const res = await fetch(`${backendUrl}/api/sessions`);
         if (res.ok) {
           const apiSessions = await res.json();
@@ -1225,10 +1286,19 @@ function Progress() {
 
 // AI Coach Nova Assistant with Resilient Streaming
 function Assistant() {
+  const profile = getProfile();
+  const userFirstName = (profile?.name && profile.name !== 'Athlete') ? profile.name.split(' ')[0] : 'there';
+  const userInitials = (profile?.name || 'Athlete')
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      text: "Hey Alex — I'm your Pysiosaathi coach. Ask me about technique, training structure, or your movement history.",
+      text: `Hey ${userFirstName} — I'm your Pysiosaathi coach. Ask me about technique, training structure, or your movement history.`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -1279,7 +1349,7 @@ function Assistant() {
     setLoading(true);
 
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      const backendUrl = getBackendUrl();
       const r = await fetch(`${backendUrl}/api/assistant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1357,7 +1427,7 @@ function Assistant() {
                 data-testid={`assistant-message-${i}`}
               >
                 <div className="message-avatar">
-                  {m.role === 'assistant' ? <Bot size={14} /> : 'AR'}
+                  {m.role === 'assistant' ? <Bot size={14} /> : userInitials}
                 </div>
                 <div>
                   <p style={{ whiteSpace: 'pre-line' }}>{m.text || 'Thinking…'}</p>

@@ -35,18 +35,18 @@ export function Profile({ onProfileUpdate }) {
 
   const stats = calculateStats();
 
-  const hM = profile.height / 100;
-  const bmi = (profile.weight / (hM * hM)).toFixed(1);
+  const hM = (Number(profile.height) || 175) / 100;
+  const bmi = hM > 0 ? ((Number(profile.weight) || 70) / (hM * hM)).toFixed(1) : '22.0';
 
   const handleSave = () => {
     const updated = {
       ...profile,
-      name: editName,
-      age: Number(editAge),
-      height: Number(editHeight),
-      weight: Number(editWeight),
-      targetWeight: Number(editTarget),
-      primaryGoal: editGoal,
+      name: editName.trim() || profile.name || 'Athlete',
+      age: Number(editAge) || profile.age || 26,
+      height: Number(editHeight) || profile.height || 175,
+      weight: Number(editWeight) || profile.weight || 70,
+      targetWeight: Number(editTarget) || profile.targetWeight || 68,
+      primaryGoal: editGoal || profile.primaryGoal,
     };
     saveProfile(updated);
     setProfile(updated);

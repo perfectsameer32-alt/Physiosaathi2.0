@@ -51,22 +51,32 @@ export function Onboarding({ onComplete }) {
   };
 
   const calculateBMI = () => {
-    const hM = height / 100;
-    return (weight / (hM * hM)).toFixed(1);
+    const hM = (Number(height) || 175) / 100;
+    const w = Number(weight) || 70;
+    if (hM <= 0) return '22.0';
+    return (w / (hM * hM)).toFixed(1);
+  };
+
+  const getBMICategory = (bmiVal) => {
+    const num = Number(bmiVal);
+    if (num < 18.5) return 'Underweight';
+    if (num < 25) return 'Healthy Range';
+    if (num < 30) return 'Overweight';
+    return 'Obese Range';
   };
 
   const handleFinish = () => {
     const updated = {
       ...currentProfile,
-      name,
-      age: Number(age),
-      height: Number(height),
-      weight: Number(weight),
-      targetWeight: Number(targetWeight),
+      name: name.trim() || currentProfile.name || 'Athlete',
+      age: Number(age) || currentProfile.age || 26,
+      height: Number(height) || currentProfile.height || 175,
+      weight: Number(weight) || currentProfile.weight || 70,
+      targetWeight: Number(targetWeight) || currentProfile.targetWeight || 68,
       fitnessLevel: level,
       primaryGoal: goals.join(' & '),
-      weeklyGoalDays: Number(daysPerWeek),
-      sessionLength: Number(duration),
+      weeklyGoalDays: Number(daysPerWeek) || 4,
+      sessionLength: Number(duration) || 25,
       language,
       onboarded: true,
     };
@@ -398,7 +408,7 @@ export function Onboarding({ onComplete }) {
                   <strong>{calculateBMI()}</strong>
                 </div>
                 <div>
-                  <span className="status-tag">Healthy Range</span>
+                  <span className="status-tag">{getBMICategory(calculateBMI())}</span>
                   <p>Targeting ~{Math.round(daysPerWeek * duration * 7.5)} kcal weekly burn</p>
                 </div>
               </div>
@@ -410,7 +420,7 @@ export function Onboarding({ onComplete }) {
               <span className="pill">
                 <Sparkles size={13} /> STEP 5 · YOUR PROGRAM IS READY
               </span>
-              <h1>Welcome to Pysiosaathi, {name}</h1>
+              <h1>Welcome to Pysiosaathi, {name.trim() || 'Athlete'}</h1>
               <p className="lede">
                 Here is the personalized movement protocol we synthesized for your goals.
               </p>

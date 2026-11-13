@@ -210,7 +210,7 @@ export function saveLanguage(lang) {
 export function calculateStats(history = getHistory()) {
   const totalSessions = Array.isArray(history) ? history.length : 0;
   const totalMinutes = Math.round(
-    history.reduce((sum, item) => sum + (item.durationSeconds || 0) / 60, 0)
+    history.reduce((sum, item) => sum + (item.durationSeconds || item.duration_seconds || 0) / 60, 0)
   );
   const totalCalories = history.reduce((sum, item) => sum + (item.calories || 0), 0);
   const totalReps = history.reduce((sum, item) => sum + (item.reps || 0), 0);
@@ -222,10 +222,18 @@ export function calculateStats(history = getHistory()) {
   // Real unique training days streak
   let streakDays = 0;
   if (totalSessions > 0) {
-    const uniqueDays = new Set(
-      history.map((h) => (h.timestamp ? new Date(h.timestamp).toDateString() : ''))
-    );
-    uniqueDays.delete('');
+    const uniqueDays = new Set();
+    history.forEach((h) => {
+      const ts = h.timestamp || h.created_at || h.date;
+      if (ts) {
+        const d = new Date(ts);
+        if (!isNaN(d.getTime())) {
+          uniqueDays.add(d.toDateString());
+        } else {
+          uniqueDays.add(new Date().toDateString());
+        }
+      }
+    });
     streakDays = Math.min(uniqueDays.size, 30);
   }
 
@@ -285,8 +293,8 @@ export function setAuthSession(user, token) {
       const prof = getProfile();
       saveProfile({
         ...prof,
-        name: user.name || prof.name || 'Alex Rivera',
-        email: user.email || prof.email || 'athlete@pysiosaathi.com',
+        name: user.name || prof.name || (user.email ? user.email.split('@')[0] : 'Athlete'),
+        email: user.email || prof.email || '',
       });
     }
     if (token) {
