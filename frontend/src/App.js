@@ -15,6 +15,8 @@ import {
   Home,
   Leaf,
   Menu,
+  Mic,
+  MicOff,
   Pause,
   Play,
   Plus,
@@ -28,6 +30,7 @@ import {
   UserRound,
   Video,
   Volume2,
+  VolumeX,
   X,
 } from 'lucide-react';
 import { allExercises, yogaExercises, workoutExercises } from './data/exercises';
@@ -54,6 +57,14 @@ import { Onboarding } from './pages/Onboarding';
 import { Profile } from './pages/Profile';
 import { Settings } from './pages/Settings';
 import { Plans } from './pages/Plans';
+import {
+  speakAnnouncement,
+  cancelAnnouncement,
+  playChime,
+  isMicSupported,
+  createSpeechRecognizer,
+  unlockAudio,
+} from './lib/speech';
 import './App.css';
 import './auth.css';
 

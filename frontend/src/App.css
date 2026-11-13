@@ -287,3 +287,26 @@
 .spin{animation:spin 1s linear infinite}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
+/* Mic Voice & Audio Announcement Styles */
+.workout-header-actions{display:flex;align-items:center;gap:10px}
+.voice-toggle.mic{border-color:#384158;color:#94a3b8}
+.voice-toggle.mic.on{border-color:#38bdf8;color:#38bdf8;background:#0c2535}
+.voice-toggle.mic.listening{border-color:#f43f5e;color:#f43f5e;background:#2d111d;animation:pulseBorder 1.5s infinite}
+@keyframes pulseBorder{0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,.4)}50%{box-shadow:0 0 0 6px rgba(244,63,94,0)}}
+
+.mic-pulsing{animation:micPulse 1.2s infinite ease-in-out}
+@keyframes micPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.2);opacity:.7}}
+
+.mic-status-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(12,37,53,.92);border:1px solid #1f506e;color:#38bdf8;padding:6px 14px;border-radius:20px;font:500 11px 'DM Mono';margin-top:10px;box-shadow:0 4px 15px rgba(0,0,0,.3)}
+.mic-status-pill.command-heard{background:rgba(22,56,42,.92);border-color:#2e7a5e;color:#a8f368}
+
+.assistant-mic-button{width:42px;height:42px;border-radius:8px;border:1px solid #2d374b;background:#141a26;color:#94a3b8;display:grid;place-items:center;transition:.2s;flex-shrink:0}
+.assistant-mic-button:hover{border-color:#8b5cf6;color:#c4b5fd}
+.assistant-mic-button.listening{background:#3b1322;border-color:#f43f5e;color:#fb7185;animation:pulseBorder 1.5s infinite}
+
+.speak-msg-btn{background:none;border:0;color:#6b7890;padding:3px;border-radius:4px;display:inline-flex;align-items:center;gap:4px;font-size:10px;cursor:pointer;margin-top:4px;transition:.2s}
+.speak-msg-btn:hover{color:#38bdf8}
+
+.mic-support-tag{display:inline-flex;align-items:center;gap:6px;font:500 10px 'DM Mono';padding:4px 10px;border-radius:12px;background:#162432;border:1px solid #25465e;color:#38bdf8}
+
+

@@ -1,120 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import { analyzeMovement } from '../lib/poseClassifier';
+import { speakAnnouncement, playChime, cancelAnnouncement, unlockAudio } from '../lib/speech';
 
-// Web Audio synthesizer with shared AudioContext to prevent context limits/leaks
-let sharedAudioCtx = null;
-function getSharedAudioContext() {
-  if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (AudioCtx) sharedAudioCtx = new AudioCtx();
-  }
-  if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
-    sharedAudioCtx.resume().catch(() => {});
-  }
-  return sharedAudioCtx;
-}
-
-// Global active utterance reference to prevent Chromium garbage collection bug
-let activeUtteranceRef = null;
-
-export function speakSpeech(phrase, { priority = false, voiceEnabled = true } = {}) {
-  if (!voiceEnabled || typeof window === 'undefined' || !window.speechSynthesis) return;
-  const synth = window.speechSynthesis;
-
-  try {
-    if (synth.paused) {
-      synth.resume();
-    }
-
-    if (priority) {
-      synth.cancel();
-    }
-
-    const utter = new SpeechSynthesisUtterance(phrase);
-    utter.rate = 1.05;
-    utter.pitch = 1.0;
-    utter.volume = 1.0;
-
-    // Pick best available English voice
-    const voices = synth.getVoices();
-    if (voices && voices.length > 0) {
-      const bestVoice = voices.find(
-        (v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.default)
-      ) || voices.find((v) => v.lang.startsWith('en')) || voices[0];
-      if (bestVoice) utter.voice = bestVoice;
-    }
-
-    activeUtteranceRef = utter;
-    utter.onend = () => {
-      if (activeUtteranceRef === utter) activeUtteranceRef = null;
-    };
-    utter.onerror = () => {
-      if (activeUtteranceRef === utter) activeUtteranceRef = null;
-    };
-
-    if (priority) {
-      setTimeout(() => {
-        try {
-          synth.speak(utter);
-        } catch {
-          // ignore
-        }
-      }, 15);
-    } else {
-      synth.speak(utter);
-    }
-  } catch (err) {
-    console.warn('[Speech] Error speaking:', err);
-  }
-}
-
-// User interaction listeners to ensure AudioContext and Speech are instantly unmuted
-if (typeof window !== 'undefined') {
-  const unlockAudio = () => {
-    const ctx = getSharedAudioContext();
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
-    if (window.speechSynthesis && window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
-  };
-  window.addEventListener('click', unlockAudio, { passive: true });
-  window.addEventListener('touchstart', unlockAudio, { passive: true });
-  window.addEventListener('keydown', unlockAudio, { passive: true });
-}
-
-function playChime(freq = 659.25, type = 'success') {
-  try {
-    const ctx = getSharedAudioContext();
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    if (type === 'error') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(220, ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.25);
-    } else {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.2);
-    }
-  } catch (err) {
-    // Audio context may be restricted
-  }
-}
+// Backward compatibility export
+export const speakSpeech = speakAnnouncement;
 
 // Safe Canvas roundRect helper for cross-browser support
 function drawRoundRect(ctx, x, y, width, height, radius) {
@@ -259,11 +149,11 @@ export function PoseTracker({
     let animId;
 
     const speak = (phrase, isPriority = false) => {
-      if (!voiceEnabled || !window.speechSynthesis) return;
+      if (!voiceEnabled) return;
       const now = Date.now();
-      if (!isPriority && now - lastVoiceCueTimeRef.current < 2600) return;
+      if (!isPriority && now - lastVoiceCueTimeRef.current < 2500) return;
       lastVoiceCueTimeRef.current = now;
-      speakSpeech(phrase, { priority: isPriority, voiceEnabled });
+      speakAnnouncement(phrase, { priority: isPriority, voiceEnabled });
     };
 
     const renderLoop = () => {
@@ -350,12 +240,15 @@ export function PoseTracker({
               repCountRef.current = nextCount;
               onRepCount?.(nextCount);
               playChime(659.25, 'success');
-              // Rep counted with valid form - speak count immediately with top priority!
-              speak(analysis.cueVoice || `Rep ${nextCount}!`, true);
+              // Rep counted with valid form - announce count number & feedback!
+              const repAnnouncement = analysis.cueVoice
+                ? `Rep ${nextCount}! ${analysis.cueVoice}`
+                : `Rep ${nextCount}!`;
+              speak(repAnnouncement, true);
             } else if (analysis.repFailedForm) {
               // Form or depth fault detected during repetition - do NOT count!
               playChime(220, 'error');
-              speak(analysis.cueVoice || 'Check your form', true);
+              speak(`Form check! ${analysis.cueVoice || 'Check your form'}`, true);
             } else if (analysis.countedHold) {
               holdSecondsRef.current += 3;
               const nextCount = repCountRef.current + 1;
@@ -528,7 +421,7 @@ export function PoseTracker({
     animId = requestAnimationFrame(renderLoop);
     return () => {
       if (animId) cancelAnimationFrame(animId);
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      cancelAnnouncement();
     };
   }, [active, isPaused, exercise, voiceEnabled, onRepCount, onFeedback, canvasRef, videoRef, modelStatus]);
 

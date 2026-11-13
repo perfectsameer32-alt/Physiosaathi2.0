@@ -9,6 +9,7 @@ import {
   Globe2,
   HeartPulse,
   LogOut,
+  Mic,
   RefreshCw,
   RotateCcw,
   Server,
@@ -33,6 +34,7 @@ import {
 import { getSupabaseConfig, saveSupabaseConfig, testSupabaseConnection } from '../lib/supabase';
 import { checkApiHealth, logoutUser } from '../lib/api';
 import { languages } from '../data/i18n';
+import { speakAnnouncement, playChime, isMicSupported, unlockAudio } from '../lib/speech';
 
 export function Settings({ currentLang, onLanguageChange }) {
   const navigate = useNavigate();
@@ -244,6 +246,36 @@ export function Settings({ currentLang, onLanguageChange }) {
                     {rate === 0.85 ? 'Slow' : rate === 1.0 ? 'Normal' : 'Brisk'}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="setting-slider-row" style={{ marginTop: 14 }}>
+              <div>
+                <strong>Audio & Mic Announcement Check</strong>
+                <span>Test speech synthesis volume, speed, and verify microphone readiness</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  className="secondary"
+                  style={{ minHeight: 36, padding: '0 14px', fontSize: 11 }}
+                  onClick={() => {
+                    unlockAudio();
+                    playChime(659.25, 'success');
+                    speakAnnouncement(
+                      `Welcome to Physiosaathi. Voice announcement is working properly at ${
+                        settings.speechRate === 0.85 ? 'slow' : settings.speechRate === 1.15 ? 'brisk' : 'normal'
+                      } pace. Real-time rep counts and form cues are active!`,
+                      { priority: true, voiceEnabled: true, rate: settings.speechRate }
+                    );
+                    showNotice('Voice announcement test played');
+                  }}
+                  data-testid="test-voice-announcement-btn"
+                >
+                  <Volume2 size={14} /> Test Voice Announcement
+                </button>
+                <span className="mic-support-tag" data-testid="mic-support-status">
+                  <Mic size={12} /> {isMicSupported() ? 'Mic Ready' : 'Mic Unavailable'}
+                </span>
               </div>
             </div>
           </div>
