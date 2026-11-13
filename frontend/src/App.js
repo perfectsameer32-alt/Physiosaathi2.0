@@ -688,16 +688,31 @@ function Workout() {
   const [active, setActive] = useState(false);
   const [camera, setCamera] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [voice, setVoice] = useState(true);
+  const [voice, setVoice] = useState(() => getSettings().voiceEnabled ?? true);
   const [reps, setReps] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [formFeedback, setFormFeedback] = useState('Waiting for movement');
   const [feedbackType, setFeedbackType] = useState('good');
   const [showFinishModal, setShowFinishModal] = useState(false);
 
+  // Hands-free Microphone Voice Recognition States
+  const [micActive, setMicActive] = useState(false);
+  const [lastVoiceCommand, setLastVoiceCommand] = useState('');
+  const micRecognizerRef = useRef(null);
+
   const video = useRef(null);
   const canvasRef = useRef(null);
   const timerRef = useRef(null);
+
+  const repsRef = useRef(reps);
+  useEffect(() => {
+    repsRef.current = reps;
+  }, [reps]);
+
+  const isPausedRef = useRef(isPaused);
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   // Live timer tick
   useEffect(() => {
@@ -713,6 +728,7 @@ function Workout() {
 
   const startCamera = async () => {
     try {
+      unlockAudio();
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 1280, min: 640 }, height: { ideal: 720, min: 480 } },
         audio: false,
@@ -726,10 +742,11 @@ function Workout() {
       setCamera(true);
       setActive(true);
       setFormFeedback('Good alignment');
-      if (voice && window.speechSynthesis) {
-        window.speechSynthesis.speak(
-          new SpeechSynthesisUtterance(`Camera active for ${e.name}. Stand back so your full body is in view.`)
-        );
+      if (voice) {
+        speakAnnouncement(`Camera active for ${e.name}. Stand back so your full body is in view.`, {
+          priority: true,
+          voiceEnabled: true,
+        });
       }
     } catch (err) {
       console.error('Camera access failed:', err);
@@ -741,27 +758,24 @@ function Workout() {
   const handleVoiceToggle = () => {
     const nextVoice = !voice;
     setVoice(nextVoice);
+    const currSettings = getSettings();
+    saveSettings({ ...currSettings, voiceEnabled: nextVoice });
     if (nextVoice) {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.resume();
-        const utter = new SpeechSynthesisUtterance('Voice guidance enabled');
-        utter.rate = 1.05;
-        window.speechSynthesis.speak(utter);
-      }
+      unlockAudio();
+      speakAnnouncement('Voice guidance enabled', { priority: true, voiceEnabled: true });
     } else {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      cancelAnnouncement();
     }
   };
 
   const handlePauseToggle = () => {
     const nextPaused = !isPaused;
     setIsPaused(nextPaused);
-    if (voice && window.speechSynthesis) {
-      window.speechSynthesis.speak(
-        new SpeechSynthesisUtterance(nextPaused ? 'Session paused' : 'Resuming session')
-      );
+    if (voice) {
+      speakAnnouncement(nextPaused ? 'Session paused' : 'Resuming session', {
+        priority: true,
+        voiceEnabled: true,
+      });
     }
   };
 
@@ -770,7 +784,64 @@ function Workout() {
       video.current.srcObject.getTracks().forEach((t) => t.stop());
     }
     clearInterval(timerRef.current);
+    if (micRecognizerRef.current) {
+      micRecognizerRef.current.stop();
+    }
     setShowFinishModal(true);
+    if (voice) {
+      speakAnnouncement(`Workout session completed. You performed ${repsRef.current} reps. Great work!`, {
+        priority: true,
+        voiceEnabled: true,
+      });
+    }
+  };
+
+  const handleMicToggle = () => {
+    if (!isMicSupported()) {
+      alert('Microphone speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge for hands-free mic commands.');
+      return;
+    }
+    const nextMic = !micActive;
+    setMicActive(nextMic);
+    if (nextMic) {
+      unlockAudio();
+      speakAnnouncement('Microphone listening for hands-free voice commands. You can say pause, resume, reps, or finish.', {
+        priority: true,
+        voiceEnabled: voice,
+      });
+      if (!micRecognizerRef.current) {
+        micRecognizerRef.current = createSpeechRecognizer({
+          continuous: true,
+          onCommand: (cmd) => {
+            setLastVoiceCommand(cmd);
+            setTimeout(() => setLastVoiceCommand(''), 4500);
+            if (cmd === 'pause') {
+              setIsPaused(true);
+              speakAnnouncement('Session paused', { priority: true, voiceEnabled: voice });
+            } else if (cmd === 'resume') {
+              setIsPaused(false);
+              speakAnnouncement('Resuming session', { priority: true, voiceEnabled: voice });
+            } else if (cmd === 'finish') {
+              handleFinishPrompt();
+            } else if (cmd === 'reps') {
+              speakAnnouncement(`Current count is ${repsRef.current} reps!`, { priority: true, voiceEnabled: voice });
+            } else if (cmd === 'voice_off') {
+              setVoice(false);
+              speakAnnouncement('Voice announcements muted', { priority: true, voiceEnabled: true });
+            } else if (cmd === 'voice_on') {
+              setVoice(true);
+              speakAnnouncement('Voice announcements enabled', { priority: true, voiceEnabled: true });
+            }
+          },
+        });
+      }
+      micRecognizerRef.current.start();
+    } else {
+      if (micRecognizerRef.current) {
+        micRecognizerRef.current.stop();
+      }
+      speakAnnouncement('Microphone voice commands disabled', { priority: true, voiceEnabled: voice });
+    }
   };
 
   const confirmFinish = async () => {
@@ -832,6 +903,10 @@ function Workout() {
         currentVideo.srcObject.getTracks().forEach((t) => t.stop());
       }
       clearInterval(timerRef.current);
+      if (micRecognizerRef.current) {
+        micRecognizerRef.current.stop();
+      }
+      cancelAnnouncement();
     };
   }, []);
 
@@ -860,15 +935,35 @@ function Workout() {
           </p>
           <h1>{e.name}</h1>
           <p className="lede">{e.description}</p>
+          {micActive && (
+            <div className={`mic-status-pill ${lastVoiceCommand ? 'command-heard' : ''}`} data-testid="mic-status-pill">
+              <Mic size={14} className="mic-pulsing" />
+              {lastVoiceCommand
+                ? `Voice Command Heard: "${lastVoiceCommand.toUpperCase()}"`
+                : 'Mic listening for hands-free commands: "Pause", "Resume", "Reps", or "Finish"'}
+            </div>
+          )}
         </div>
-        <button
-          className={voice ? 'voice-toggle on' : 'voice-toggle'}
-          onClick={handleVoiceToggle}
-          data-testid="voice-toggle"
-        >
-          <Volume2 size={17} />
-          {voice ? 'Voice on' : 'Voice off'}
-        </button>
+        <div className="workout-header-actions">
+          <button
+            className={micActive ? 'voice-toggle mic on' : 'voice-toggle mic'}
+            onClick={handleMicToggle}
+            data-testid="mic-toggle"
+            title="Hands-free microphone voice control (say pause, resume, reps, finish)"
+          >
+            {micActive ? <Mic size={17} className="mic-pulsing" /> : <MicOff size={17} />}
+            {micActive ? 'Mic Voice: ON' : 'Mic Voice: OFF'}
+          </button>
+          <button
+            className={voice ? 'voice-toggle on' : 'voice-toggle'}
+            onClick={handleVoiceToggle}
+            data-testid="voice-toggle"
+            title="Spoken voice announcement coach"
+          >
+            {voice ? <Volume2 size={17} /> : <VolumeX size={17} />}
+            {voice ? 'Voice on' : 'Voice off'}
+          </button>
+        </div>
       </section>
 
       {/* Side-by-Side Workout Stage */}
