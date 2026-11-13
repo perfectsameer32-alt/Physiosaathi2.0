@@ -1409,6 +1409,33 @@ function Assistant() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [autoAnnounce, setAutoAnnounce] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const assistantRecognizerRef = useRef(null);
+
+  const toggleMic = () => {
+    if (!isMicSupported()) {
+      alert('Microphone input is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    if (isListening) {
+      assistantRecognizerRef.current?.stop();
+      setIsListening(false);
+    } else {
+      unlockAudio();
+      assistantRecognizerRef.current = createSpeechRecognizer({
+        continuous: false,
+        onTranscript: (text) => {
+          setInput(text);
+        },
+        onStateChange: (active) => {
+          setIsListening(active);
+        },
+      });
+      assistantRecognizerRef.current.start();
+    }
+  };
 
   // Local expert Coach Nova streaming fallback
   const streamLocalCoachResponse = async (q) => {
@@ -1445,12 +1472,20 @@ function Assistant() {
         return next;
       });
     }
+
+    if (autoAnnounce) {
+      speakAnnouncement(reply, { priority: true });
+    }
   };
 
   const send = async () => {
     if (!input.trim() || loading) return;
     const q = input;
     setInput('');
+    if (isListening) {
+      assistantRecognizerRef.current?.stop();
+      setIsListening(false);
+    }
     setMessages((m) => [...m, { role: 'user', text: q }]);
     setLoading(true);
 
@@ -1484,6 +1519,10 @@ function Assistant() {
             });
           });
       }
+
+      if (autoAnnounce && text.trim()) {
+        speakAnnouncement(text.trim(), { priority: true });
+      }
     } catch (err) {
       // Smooth local intelligence stream
       await streamLocalCoachResponse(q);
@@ -1515,14 +1554,34 @@ function Assistant() {
                 Available now
               </span>
             </div>
-            <button
-              className="icon-button"
-              onClick={() => setMessages([])}
-              data-testid="assistant-clear-button"
-              title="Clear conversation"
-            >
-              <X size={17} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                className={autoAnnounce ? 'voice-toggle on' : 'voice-toggle'}
+                style={{ minHeight: 30, fontSize: 10, padding: '0 10px' }}
+                onClick={() => {
+                  const nextAnnounce = !autoAnnounce;
+                  setAutoAnnounce(nextAnnounce);
+                  if (nextAnnounce) {
+                    unlockAudio();
+                    speakAnnouncement('Voice announcements enabled for coach replies', { priority: true });
+                  } else {
+                    cancelAnnouncement();
+                  }
+                }}
+                data-testid="assistant-auto-announce"
+                title="Automatically announce Coach answers aloud"
+              >
+                <Volume2 size={13} /> {autoAnnounce ? 'Voice: ON' : 'Voice: OFF'}
+              </button>
+              <button
+                className="icon-button"
+                onClick={() => setMessages([])}
+                data-testid="assistant-clear-button"
+                title="Clear conversation"
+              >
+                <X size={17} />
+              </button>
+            </div>
           </div>
 
           <div className="messages">
@@ -1537,7 +1596,22 @@ function Assistant() {
                 </div>
                 <div>
                   <p style={{ whiteSpace: 'pre-line' }}>{m.text || 'Thinking…'}</p>
-                  <small>{m.role === 'assistant' ? 'Coach Nova' : 'You'} · just now</small>
+                  <div style={{ display: 'flex', justifyContent: m.role === 'assistant' ? 'space-between' : 'flex-end', alignItems: 'center' }}>
+                    <small>{m.role === 'assistant' ? 'Coach Nova' : 'You'} · just now</small>
+                    {m.role === 'assistant' && m.text && (
+                      <button
+                        className="speak-msg-btn"
+                        onClick={() => {
+                          unlockAudio();
+                          speakAnnouncement(m.text, { priority: true });
+                        }}
+                        data-testid={`assistant-speak-${i}`}
+                        title="Announce message on speaker"
+                      >
+                        <Volume2 size={13} /> Listen
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -1564,9 +1638,18 @@ function Assistant() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder="Ask about movement, technique, or plans…"
+              placeholder={isListening ? 'Listening to your voice... Speak now' : 'Ask about movement, technique, or plans…'}
               data-testid="assistant-input"
             />
+            <button
+              type="button"
+              className={isListening ? 'assistant-mic-button listening' : 'assistant-mic-button'}
+              onClick={toggleMic}
+              data-testid="assistant-mic-button"
+              title={isListening ? 'Listening... click to stop' : 'Click to dictate via microphone'}
+            >
+              <Mic size={17} className={isListening ? 'mic-pulsing' : ''} />
+            </button>
             <button
               onClick={send}
               className="primary send-button"
